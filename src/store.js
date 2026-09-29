@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { todayKey } from './dates.js'
-import { bankedMs, cleared, endedAt, isPaused, pausedAt, runningSince } from './timing.js'
+import { AUTO_CHECKIN_MS, bankedMs, cleared, endedAt, isPaused, pausedAt, runningSince, sessionMs } from './timing.js'
 
 const KEY = 'workout-tracker:v2'
 const V1_KEY = 'workout-tracker:v1' // v1 was just { date: [entries] }
@@ -11,6 +11,8 @@ const V1_KEY = 'workout-tracker:v1' // v1 was just { date: [entries] }
 // bodyWeight: { "2026-09-20": 182.4 }
 // types also carry an optional `warmup` string; exercises an optional `photo` (data URL).
 // sessions:   { "2026-09-20": { start: ms, end: ms | null } }
+// checkIns:   { "2026-09-20": ms } — only the days checked in by tapping the button. Days that
+//             earned it by training long enough are derived instead; see isCheckedIn.
 // `theme` is the accent color name.
 const emptyState = () => ({
   logs: {},
@@ -18,6 +20,7 @@ const emptyState = () => ({
   plan: Array(7).fill(null),
   bodyWeight: {},
   sessions: {},
+  checkIns: {},
   unit: 'lb',
   theme: 'green',
   dustStyle: 'natural', // stardust on the active exercise: natural | right | left | up | down | off
@@ -53,6 +56,18 @@ function load() {
 // crypto.randomUUID needs a secure context; over plain http on a LAN IP it's missing.
 export const newId = () =>
   globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+
+// A day counts as checked in once you tap the button, or once its workout passes AUTO_CHECKIN_MS.
+// The long-workout half is derived rather than written down, so it can't be missed by the app being
+// closed as the 25 minutes elapse, and it goes away again if the timer is reset.
+export const isCheckedIn = ({ checkIns, sessions }, day, now = Date.now()) =>
+  Boolean(checkIns?.[day]) || sessionMs(sessions?.[day], now) >= AUTO_CHECKIN_MS
+
+// Checked-in days within a "YYYY-MM" month, oldest first.
+export const checkInDays = (state, month, now = Date.now()) =>
+  [...new Set([...Object.keys(state.checkIns ?? {}), ...Object.keys(state.sessions ?? {})])]
+    .filter((day) => day.startsWith(month) && isCheckedIn(state, day, now))
+    .sort()
 
 export function useStore() {
   const [state, setState] = useState(load)
@@ -107,6 +122,18 @@ export function useStore() {
         const copy = { ...sessions }
         delete copy[key]
         return { sessions: copy }
+      }),
+
+    checkIn: (key) => {
+      const at = Date.now()
+      patch(({ checkIns }) => ({ checkIns: { ...checkIns, [key]: at } }))
+    },
+    // Only clears a tapped check-in. A day earned by a long workout stays until its timer is reset.
+    undoCheckIn: (key) =>
+      patch(({ checkIns }) => {
+        const copy = { ...checkIns }
+        delete copy[key]
+        return { checkIns: copy }
       }),
 
     // Replaces workout types and the weekly plan (see planFile.js). Logged history is untouched.

@@ -1,10 +1,15 @@
 import { useRef, useState } from 'react'
 import { DAY_NAMES, dayIndex, todayKey } from '../dates.js'
 import { buildPlanFile, parsePlanFile, saveJsonFile } from '../planFile.js'
+import { lastTrainedByType, recoveryStage } from '../recovery.js'
+import { isCheckedIn } from '../store.js'
 
 export default function PlanTab({ store, goTo }) {
-  const { types, plan, setPlanDay, importPlan } = store
-  const todayIdx = dayIndex(todayKey())
+  const { types, plan, logs, setPlanDay, importPlan } = store
+  const today = todayKey()
+  const todayIdx = dayIndex(today)
+  // Only a day you checked in on resets a workout's recovery clock.
+  const lastTrained = lastTrainedByType(logs, (day) => isCheckedIn(store, day))
   const fileInput = useRef(null)
   const [message, setMessage] = useState(null) // { ok: boolean, text: string }
 
@@ -35,7 +40,10 @@ export default function PlanTab({ store, goTo }) {
   return (
     <main className="main">
       <h1 className="page-title">Weekly plan</h1>
-      <p className="hint">Pick a workout for each weekday. This cycle repeats every week, indefinitely.</p>
+      <p className="hint">
+        Pick a workout for each weekday. This cycle repeats every week, indefinitely. Each one shows how
+        recovered it is — checking in on the Today tab starts its 7-day clock.
+      </p>
 
       {types.length === 0 && (
         <p className="hint warn">
@@ -55,6 +63,7 @@ export default function PlanTab({ store, goTo }) {
                 <p className="notes tight">
                   {type ? `${type.exercises.length} exercise${type.exercises.length === 1 ? '' : 's'}` : 'Rest day'}
                 </p>
+                {type && <Recovery lastDay={lastTrained[type.id]} today={today} />}
               </div>
               <select value={type ? type.id : ''} onChange={(e) => setPlanDay(i, e.target.value)} aria-label={`${name} workout`}>
                 <option value="">Rest</option>
@@ -81,5 +90,17 @@ export default function PlanTab({ store, goTo }) {
         {message && <p className={`notes ${message.ok ? 'ok' : 'err'}`} role="status">{message.text}</p>}
       </section>
     </main>
+  )
+}
+
+// How rested this workout is. The dot breathes while the muscle group is still recovering and
+// settles once it's ready, so the row reads at a glance without parsing the text.
+function Recovery({ lastDay, today }) {
+  const { id, recovering, label } = recoveryStage(lastDay, today)
+  return (
+    <p className={`recovery rec-${id}`}>
+      <span className={`recovery-dot ${recovering ? 'breathing' : ''}`} aria-hidden="true" />
+      {label}
+    </p>
   )
 }

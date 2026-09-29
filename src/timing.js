@@ -10,6 +10,13 @@
 // A paused exercise finishes on its own once it has sat untouched this long:
 export const AUTO_END_MS = 60_000
 
+// A workout that runs at least this long counts as a check-in without tapping the button.
+export const AUTO_CHECKIN_MS = 25 * 60_000
+
+// How long a day's workout session has run: live while it is going, final once ended.
+export const sessionMs = (session, now = Date.now()) =>
+  session ? Math.max(0, (session.end ?? now) - session.start) : 0
+
 // Entries logged before pause/resume existed only had startedAt + endedAt, so treat a start with no
 // banked time as still running.
 export const runningSince = (w) =>

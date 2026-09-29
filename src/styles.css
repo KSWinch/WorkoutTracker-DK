@@ -9,6 +9,13 @@
   --danger: #f87171;
   --up: #34d399;   /* progress deltas keep fixed meaning regardless of theme */
   --down: #f87171;
+  /* Recovery ramp. Fixed like --up/--down: the colors carry the meaning, so the accent
+     theme must not repaint them. */
+  --rec-red: #f87171;
+  --rec-orange: #fb923c;
+  --rec-yellow: #fbbf24;
+  --rec-green: #34d399;
+  --rec-blue: #60a5fa;
   color-scheme: dark;
 }
 
@@ -397,7 +404,7 @@ select {
 @keyframes pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .card.active, .star, .pulse { animation: none; }
+  .card.active, .star, .pulse, .recovery-dot.breathing { animation: none; }
   .star { opacity: 0.7; }
 }
 
@@ -426,6 +433,43 @@ select {
 .topbar-actions { display: flex; align-items: center; gap: 8px; }
 .themes { margin-top: 10px; padding: 12px; }
 .themes .eyebrow { margin: 0 0 10px; }
+
+/* Recovery indicator under each workout on the Plan tab. The dot breathes while the muscle
+   group is still recovering and holds steady once it's ready. */
+.recovery {
+  display: flex; align-items: center; gap: 6px;
+  margin: 4px 0 0; font-size: 0.75rem; color: var(--rec);
+}
+.recovery-dot {
+  width: 9px; height: 9px; flex: none; border-radius: 50%;
+  background: var(--rec); box-shadow: 0 0 6px var(--rec);
+}
+.recovery-dot.breathing { animation: breathe 4.5s ease-in-out infinite; }
+.rec-red    { --rec: var(--rec-red); }
+.rec-orange { --rec: var(--rec-orange); }
+.rec-yellow { --rec: var(--rec-yellow); }
+.rec-green  { --rec: var(--rec-green); }
+.rec-blue   { --rec: var(--rec-blue); }
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.3; transform: scale(0.75); }
+  50%      { opacity: 1; transform: scale(1.2); }
+}
+
+/* Slot another day's workout into today */
+.slot-in { margin-bottom: 12px; }
+.slot-row { display: flex; gap: 8px; margin-top: 8px; }
+.slot-row select { flex: 1; min-width: 0; }
+.slot-row .secondary { flex: none; }
+.slot-row .secondary:disabled { opacity: 0.5; }
+
+/* Daily check-in: the button on Today, and the monthly tally on Progress */
+.check-in { margin-bottom: 12px; }
+.check-in .eyebrow { margin-bottom: 8px; }
+.check-in.on { border-color: var(--accent); }
+.check-in-state { margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--accent); }
+.check-in-summary { margin-bottom: 16px; }
+.check-in-count { margin: 0; font-size: 2rem; line-height: 1.1; font-weight: 800; color: var(--accent); }
 
 /* Paused exercise: dimmed, no glow, keeps a marker so it stands out from untouched ones */
 .card.paused { border-left: 4px solid var(--muted); }

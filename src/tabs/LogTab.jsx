@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { addDays, dayIndex, formatClock, formatDuration, formatLong, formatTime, todayKey } from '../dates.js'
-import { AUTO_END_MS, exerciseState, isPaused, totalMs } from '../timing.js'
+import { DAY_NAMES, addDays, dayIndex, formatClock, formatDuration, formatLong, formatTime, todayKey } from '../dates.js'
+import { AUTO_CHECKIN_MS, AUTO_END_MS, exerciseState, isPaused, sessionMs, totalMs } from '../timing.js'
 import WorkoutForm from '../WorkoutForm.jsx'
 import { Thumb } from '../Photo.jsx'
 import Dust from '../Dust.jsx'
@@ -20,9 +20,9 @@ const photoFor = (types, entry) =>
 
 export default function LogTab({ store, goTo }) {
   const {
-    logs, types, plan, unit, bodyWeight, sessions,
+    logs, types, plan, unit, bodyWeight, sessions, checkIns,
     addLog, addLogs, editLog, removeLog, resetDayTimers, setBodyWeight, startSession, endSession, clearSession,
-    tapExercise, endExercise, resetExercise, endStalePaused,
+    tapExercise, endExercise, resetExercise, endStalePaused, checkIn, undoCheckIn,
   } = store
   const [day, setDay] = useState(todayKey)
   const [editing, setEditing] = useState(null) // null | 'new' | entry id
@@ -57,6 +57,16 @@ export default function LogTab({ store, goTo }) {
       day,
       planned.exercises.map(({ name, sets, reps, weight }) => ({ name, sets, reps, weight, notes: '', typeId: planned.id })),
     )
+
+  // Pull a different day's workout into this one — swapping leg day forward, or training on a rest day.
+  const slotIn = (typeId) => {
+    const t = types.find((x) => x.id === typeId)
+    if (!t) return
+    addLogs(
+      day,
+      t.exercises.map(({ name, sets, reps, weight }) => ({ name, sets, reps, weight, notes: '', typeId: t.id })),
+    )
+  }
 
   // A paused exercise finishes itself once it has been left alone long enough.
   const hasPaused = workouts.some(isPaused)
@@ -109,6 +119,13 @@ export default function LogTab({ store, goTo }) {
         </aside>
 
         <main className="center">
+          <CheckInCard
+            manualAt={checkIns[day]}
+            session={session}
+            onCheckIn={() => checkIn(day)}
+            onUndo={() => undoCheckIn(day)}
+          />
+
           {!planned && !hasPlan && (
             <p className="rest">
               Set up your weekly cycle in the <button className="link" onClick={() => goTo('plan')}>Plan</button> tab.
@@ -262,6 +279,8 @@ export default function LogTab({ store, goTo }) {
             })}
           </ul>
 
+          <SlotInWorkout types={types} plan={plan} excludeId={planned?.id} onSlot={slotIn} />
+
           {editing === 'new' ? (
             <WorkoutForm
               types={types}
@@ -342,14 +361,93 @@ function WeightPanel({ label, previous, current, unit, onSave, onClear }) {
   )
 }
 
-// Ticks once a second while mounted.
-function useNow() {
+// Drops another workout's exercises into this day. Today's own planned workout is left out, since
+// the Planned card above already offers it.
+function SlotInWorkout({ types, plan, excludeId, onSlot }) {
+  const [pick, setPick] = useState('')
+  const options = types.filter((t) => t.id !== excludeId)
+  if (options.length === 0) return null
+
+  const plannedFor = (id) => {
+    const i = plan.indexOf(id)
+    return i === -1 ? null : DAY_NAMES[i]
+  }
+
+  const add = () => {
+    onSlot(pick)
+    setPick('')
+  }
+
+  return (
+    <section className="card slot-in">
+      <p className="eyebrow">Slot in another workout</p>
+      <div className="slot-row">
+        <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label="Workout to slot in">
+          <option value="">Choose a workout…</option>
+          {options.map((t) => {
+            const dayName = plannedFor(t.id)
+            return (
+              <option key={t.id} value={t.id}>
+                {dayName ? `${t.name} (${dayName})` : t.name}
+              </option>
+            )
+          })}
+        </select>
+        <button className="secondary" disabled={!pick} onClick={add}>Add</button>
+      </div>
+    </section>
+  )
+}
+
+// Ticks once a second while mounted, unless there is nothing live to count.
+function useNow(active = true) {
   const [now, setNow] = useState(Date.now)
   useEffect(() => {
+    if (!active) return
+    setNow(Date.now())
     const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [active])
   return now
+}
+
+// Marks the day as trained. Tapping the button is one way in; letting the workout timer pass
+// 25 minutes is the other, so a long session counts even if you never tap it.
+function CheckInCard({ manualAt, session, onCheckIn, onUndo }) {
+  const running = Boolean(session) && !session.end
+  // Tick only while a session is live; an ended one has a fixed length and needs no clock.
+  const elapsedNow = sessionMs(session, useNow(running))
+  const auto = elapsedNow >= AUTO_CHECKIN_MS
+
+  if (manualAt || auto) {
+    return (
+      <section className="card check-in on">
+        <p className="eyebrow">Check-in</p>
+        <p className="check-in-state">Checked in</p>
+        <p className="notes tight">
+          {manualAt ? (
+            <>
+              Tapped at {formatTime(manualAt)} <button className="link" onClick={onUndo}>Undo</button>
+            </>
+          ) : (
+            `Earned automatically · ${formatDuration(elapsedNow)} of training`
+          )}
+        </p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="card check-in">
+      <p className="eyebrow">Check-in</p>
+      <button className="primary add" onClick={onCheckIn}>Check in</button>
+      <p className="notes tight">
+        {running
+          ? `Or keep going — ${formatDuration(AUTO_CHECKIN_MS - elapsedNow)} more counts automatically.`
+          : 'Or train for 25 minutes and it counts automatically.'}
+      </p>
+    </section>
+  )
 }
 
 // Live h:mm:ss total for an exercise in progress, including time banked before it was paused.

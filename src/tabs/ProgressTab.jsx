@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { monthLabel } from '../dates.js'
+import { monthKey, monthLabel, monthLabelLong, todayKey } from '../dates.js'
+import { checkInDays } from '../store.js'
 
 const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1))
 
@@ -56,10 +57,21 @@ export default function ProgressTab({ store }) {
   const groups = useMemo(() => buildGroups(logs, types), [logs, types])
   const shown = filter === 'all' ? groups : groups.filter((g) => g.id === filter)
 
+  const month = monthKey(todayKey())
+  const checkedIn = checkInDays(store, month).length
+
   return (
     <main className="main">
       <h1 className="page-title">Progress</h1>
       <p className="hint">Your weight for each exercise, month by month: where you started and where you are now.</p>
+
+      <section className="card check-in-summary">
+        <p className="eyebrow">Check-ins</p>
+        <p className="check-in-count">{checkedIn}</p>
+        <p className="notes tight">
+          {checkedIn === 1 ? 'day' : 'days'} trained in {monthLabelLong(month)}
+        </p>
+      </section>
 
       {groups.length === 0 ? (
         <p className="empty">Log some workouts with weights and your progress will show up here.</p>

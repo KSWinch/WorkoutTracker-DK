@@ -1,0 +1,29 @@
+# Build settings live here rather than in the Netlify dashboard so they're
+# versioned with the code and survive re-linking the site.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Vite fingerprints everything under assets/, so those URLs are safe to cache
+# forever — a new build produces new filenames.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# The service worker and the manifest are NOT fingerprinted, so they have to be
+# revalidated every time. If either gets cached, an installed PWA can pin itself
+# to an old build and never see a deploy.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

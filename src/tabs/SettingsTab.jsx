@@ -79,6 +79,12 @@ export default function SettingsTab({ store }) {
           </div>
         </div>
       </section>
+
+      <section className="card setting">
+        <h2 className="setting-title">About</h2>
+        <p className="notes tight">Tracker DK v{__APP_VERSION__}</p>
+        <p className="notes tight">Built {__BUILD_TIME__} UTC</p>
+      </section>
     </main>
   )
 }

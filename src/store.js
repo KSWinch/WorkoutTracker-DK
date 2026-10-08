@@ -5,8 +5,9 @@ import { AUTO_CHECKIN_MS, bankedMs, cleared, endedAt, isPaused, pausedAt, runnin
 const KEY = 'workout-tracker:v2'
 const V1_KEY = 'workout-tracker:v1' // v1 was just { date: [entries] }
 
-// logs:       { "2026-09-20": [{ id, name, sets, reps, weight, notes, typeId?, startedAt?, endedAt? }] }
+// logs:       { "2026-09-20": [{ id, name, sets, reps, weight, notes, typeId?, exerciseId?, startedAt?, endedAt? }] }
 // types:      [{ id, name, exercises: [{ id, name, sets, reps, weight }] }]
+// Exercises and log entries with kind: 'time' are timed (e.g. treadmill): they use `minutes` instead of sets/reps/weight.
 // plan:       7 type ids (or null = rest), Monday first. Repeats every week.
 // bodyWeight: { "2026-09-20": 182.4 }
 // types also carry an optional `warmup` string; exercises an optional `photo` (data URL).
@@ -52,6 +53,19 @@ function load() {
   if (isObject(v1)) return { ...base, logs: v1 }
   return base
 }
+
+// A workout-type exercise copied into a day's log.
+export const toLogEntry = (e, typeId) => ({
+  name: e.name,
+  kind: e.kind ?? 'sets',
+  sets: e.sets ?? '',
+  reps: e.reps ?? '',
+  weight: e.weight ?? '',
+  minutes: e.minutes ?? '',
+  notes: '',
+  typeId,
+  exerciseId: e.id,
+})
 
 // crypto.randomUUID needs a secure context; over plain http on a LAN IP it's missing.
 export const newId = () =>
@@ -207,10 +221,22 @@ export function useStore() {
         plan: plan.map((p) => (p === id ? null : p)),
       })),
     // Every weight set on a workout-type exercise is remembered in `weightHistory` so Progress can show it.
+    // If today's log already holds this workout, the new exercise joins it there too.
     addExercise: (typeId, exercise) => {
       const id = newId()
+      const logId = newId()
+      const weightAt = Date.now()
+      const today = todayKey()
       const weightHistory = isPositive(exercise.weight) ? [historyPoint(exercise.weight)] : []
-      updateType(typeId, (t) => ({ ...t, exercises: [...t.exercises, { ...exercise, id, weightHistory }] }))
+      const added = { ...exercise, id, weightHistory }
+      patch(({ types, logs }) => {
+        const day = logs[today] ?? []
+        const inToday = day.some((w) => w.typeId === typeId)
+        return {
+          types: types.map((t) => (t.id === typeId ? { ...t, exercises: [...t.exercises, added] } : t)),
+          ...(inToday ? { logs: { ...logs, [today]: [...day, { ...toLogEntry(added, typeId), id: logId, weightAt }] } } : {}),
+        }
+      })
     },
     editExercise: (typeId, id, exercise) => {
       const point = isPositive(exercise.weight) ? historyPoint(exercise.weight) : null

@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react'
-import { DAY_NAMES, addDays, dayIndex, formatClock, formatDuration, formatLong, formatTime, todayKey } from '../dates.js'
+import { DAY_NAMES, addDays, dayIndex, formatClock, formatDuration, formatLong, formatTime, formatTime12, formatTime24, todayKey } from '../dates.js'
+import { toLogEntry } from '../store.js'
 import { AUTO_CHECKIN_MS, AUTO_END_MS, exerciseState, isPaused, sessionMs, totalMs } from '../timing.js'
-import WorkoutForm from '../WorkoutForm.jsx'
+import WorkoutForm, { describe } from '../WorkoutForm.jsx'
 import { Thumb } from '../Photo.jsx'
 import Dust from '../Dust.jsx'
 
 const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1))
-
-const describe = (e, unit) =>
-  [e.sets && `${e.sets} sets`, e.reps && `${e.reps} reps`, e.weight && `${e.weight} ${unit}`]
-    .filter(Boolean)
-    .join(' · ') || 'No details'
 
 // Logged entries don't store photos; look the picture up from the matching exercise in the workout type.
 const photoFor = (types, entry) =>
@@ -52,20 +48,13 @@ export default function LogTab({ store, goTo }) {
     setEditing(null)
   }
 
-  const loadPlanned = () =>
-    addLogs(
-      day,
-      planned.exercises.map(({ name, sets, reps, weight }) => ({ name, sets, reps, weight, notes: '', typeId: planned.id })),
-    )
+  const loadPlanned = () => addLogs(day, planned.exercises.map((e) => toLogEntry(e, planned.id)))
 
   // Pull a different day's workout into this one — swapping leg day forward, or training on a rest day.
   const slotIn = (typeId) => {
     const t = types.find((x) => x.id === typeId)
     if (!t) return
-    addLogs(
-      day,
-      t.exercises.map(({ name, sets, reps, weight }) => ({ name, sets, reps, weight, notes: '', typeId: t.id })),
-    )
+    addLogs(day, t.exercises.map((e) => toLogEntry(e, t.id)))
   }
 
   // A paused exercise finishes itself once it has been left alone long enough.
@@ -487,7 +476,9 @@ function TimePanel({ session, onStart, onEnd, onReset }) {
           <dl className="times">
             <div>
               <dt>Started</dt>
-              <dd>{formatTime(session.start)}</dd>
+              <dd>
+                {formatTime24(session.start)} <span className="time-12">{formatTime12(session.start)}</span>
+              </dd>
             </div>
             {running ? (
               <div>

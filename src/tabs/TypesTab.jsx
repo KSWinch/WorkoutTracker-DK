@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import WorkoutForm from '../WorkoutForm.jsx'
+import WorkoutForm, { describe } from '../WorkoutForm.jsx'
 import { PhotoSlot } from '../Photo.jsx'
 
 export default function TypesTab({ store }) {
@@ -117,11 +117,7 @@ function TypeDetail({ type, store, onBack }) {
                     </button>
                   </div>
                 </div>
-                <p className="stats">
-                  {[ex.sets && `${ex.sets} sets`, ex.reps && `${ex.reps} reps`, ex.weight && `${ex.weight} ${unit}`]
-                    .filter(Boolean)
-                    .join(' · ') || 'No details'}
-                </p>
+                <p className="stats">{describe(ex, unit)}</p>
               </div>
             </li>
           ),

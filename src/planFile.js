@@ -36,6 +36,8 @@ export function parsePlanFile(raw) {
         .map((e) => ({
           id: typeof e.id === 'string' && e.id ? e.id : newId(),
           name: text(e.name, 80).trim() || 'Exercise',
+          kind: e.kind === 'time' ? 'time' : 'sets',
+          minutes: text(e.minutes, 10),
           sets: text(e.sets, 10),
           reps: text(e.reps, 10),
           weight: text(e.weight, 10),

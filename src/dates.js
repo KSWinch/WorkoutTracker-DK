@@ -55,6 +55,8 @@ export const addMonths = (mk, n) => {
 
 // Timestamps (ms since epoch) for workout start/end.
 export const formatTime = (ms) => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+export const formatTime24 = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+export const formatTime12 = (ms) => new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
 
 // Live elapsed display: h:mm:ss
 export const formatClock = (ms) => {

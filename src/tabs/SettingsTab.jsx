@@ -8,6 +8,8 @@ export const THEMES = [
   { id: 'pink', label: 'Pink', color: '#f472b6' },
   { id: 'red', label: 'Red', color: '#f87171' },
   { id: 'orange', label: 'Orange', color: '#fb923c' },
+  { id: 'yellow', label: 'Sunlight', color: '#fcd34d' },
+  { id: 'white', label: 'White', color: '#f3f4f6' },
 ]
 
 const DUST = [

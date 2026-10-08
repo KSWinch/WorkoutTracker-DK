@@ -30,6 +30,7 @@ function buildGroups(logs, types) {
   types.forEach((t) => {
     const g = group(t.id, t.name)
     t.exercises.forEach((e) => {
+      if (e.kind === 'time') return // timed exercises have no weight to track
       const ex = exercise(g, e.name)
       ex.planned = e.weight
       ;(e.weightHistory ?? []).forEach((h) => addPoint(ex, h.day, h.at ?? 0, h.weight))
@@ -40,6 +41,7 @@ function buildGroups(logs, types) {
     .sort()
     .forEach((day) => {
       logs[day].forEach((w) => {
+        if (w.kind === 'time') return
         const type = typeById.get(w.typeId)
         const g = type ? group(type.id, type.name) : group('none', 'Other')
         const ex = exercise(g, w.name)

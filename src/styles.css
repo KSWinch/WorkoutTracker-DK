@@ -1,5 +1,6 @@
 :root {
-  --bg: #111827;
+  --page: #000;    /* behind everything; the accent glows onto it from the top */
+  --bg: #111827;   /* inputs and wells inside cards */
   --card: #1f2937;
   --border: #374151;
   --text: #f9fafb;
@@ -24,12 +25,22 @@
 :root[data-theme='purple'] { --accent: #a78bfa; --on-accent: #1e1040; }
 :root[data-theme='pink']   { --accent: #f472b6; --on-accent: #3a0a24; }
 :root[data-theme='orange'] { --accent: #fb923c; --on-accent: #331500; }
+:root[data-theme='yellow'] { --accent: #fcd34d; --on-accent: #3a2800; }
+:root[data-theme='white']  { --accent: #f3f4f6; --on-accent: #111827; }
 /* Red accent would look identical to destructive actions, so those switch to amber here. */
 :root[data-theme='red']    { --accent: #f87171; --on-accent: #3b0a0a; --danger: #fbbf24; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-html, body { margin: 0; background: var(--bg); color: var(--text); }
+/* The accent color glows down from the top of the page and fades into black. It's the page's own
+   background, so it always sits behind everything. */
+html {
+  background:
+    radial-gradient(ellipse 90% 340px at 50% 0%, color-mix(in srgb, var(--accent) 40%, transparent), transparent)
+    no-repeat,
+    var(--page);
+}
+body { margin: 0; background: transparent; color: var(--text); }
 html { overflow-x: hidden; }
 body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -311,6 +322,7 @@ select {
 .times div { display: grid; }
 .times dt { font-size: 0.75rem; color: var(--muted); }
 .times dd { margin: 0; font-size: 1.05rem; font-weight: 600; }
+.times .time-12 { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
 .times dd.big { font-size: 1.4rem; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
 
 /* Photos */
@@ -476,3 +488,6 @@ select {
 .ex-status.paused { color: var(--muted); }
 .ex-status.paused strong { color: var(--text); }
 .end-now { margin-left: 8px; }
+
+/* Sets & reps / Timed switch at the top of the exercise form */
+.seg.kind { justify-self: start; }
